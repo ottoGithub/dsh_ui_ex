@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "DSH UI enhancements",
+    "description": "One bundle of sidebar and desktop enhancements. Workspace recency and pin: the workspace list follows the Session list's \"Last updated\" order — pinned workspaces lead, then every workspace by the newest activity inside it; right-click a workspace row (or open its \"...\" menu) to pin or unpin it, with the same pushpin the Session rows use. Open a folder from Explorer (Windows): the Explorer context menu gains \"Open in DeepSeek Harness\" for folders, folder backgrounds, and drives, which opens that folder as a Workspace in the current window; on first use the bundle asks for administrator rights once to register the machine-wide menu, and it makes no network requests. Switch each feature on or off in this plugin's config. Limits: a manual workspace drag is temporary because the order is automatic; a pinned workspace shows no row-level marker because the shipped row has no decoration slot; Windows 11's new context menu only shows machine-wide verbs, which is why the prompt is needed."
+  }
+}

@@ -1,9 +1,9 @@
 {
-  "name": "@local/dsh-workspace-recency-pin",
+  "name": "@local/dsh-ui-ex",
   "version": "1.0.0",
   "private": true,
+  "description": "DeepSeek Harness UI enhancements in one bundle: workspace recency order and pinning, and opening a folder from the Windows Explorer context menu.",
   "type": "module",
-  "description": "Sorts the sidebar's workspaces by their most recent session activity and adds a pin action that keeps pinned workspaces at the top.",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -14,9 +14,23 @@
     "index.js",
     "client.js",
     "cordis.patch.yml",
+    "src",
+    "assets",
     "locale/*.json",
     "icon.svg",
     "README.md"
+  ],
+  "engines": {
+    "dsh": ">=0.2.1-rc.5 <0.3.0"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "ui",
+    "sidebar",
+    "workspace",
+    "windows",
+    "explorer"
   ],
   "dsh": {
     "bundle": {

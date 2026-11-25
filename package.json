@@ -1,0 +1,15 @@
+{
+  "name": "dsh-ui-ex",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DeepSeek Harness UI enhancement suite: one installable bundle, many independently switchable features.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "new-feature": "node scripts/new-feature.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

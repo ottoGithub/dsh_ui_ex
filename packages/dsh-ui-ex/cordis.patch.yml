@@ -1,0 +1,17 @@
+# DeepSeek Harness UI enhancements.
+#
+# One row for the whole suite. Everything a feature contributes is switched in
+# `config.features`: `true`/`false` turns a feature on or off, or use an object
+# to also override its options, e.g.
+#
+#   open-in-dsh: { enabled: true, autoInstall: false }
+#
+# A profile patch that repeats this row replaces the complete config, so copy
+# the block you want to change and keep the other entries.
+- insert:
+    - id: ui-ex
+      name: '@local/dsh-ui-ex'
+      config:
+        features:
+          workspace-recency: true
+          open-in-dsh: true
