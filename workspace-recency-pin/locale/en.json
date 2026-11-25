@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Workspace recency and pin",
+    "description": "Sorts the sidebar's workspaces the way the Session list's \"Last updated\" order works: pinned workspaces lead, then everything else by the most recent activity of the Sessions inside. Right-click a workspace row, or open its \"...\" menu, to pin or unpin it; the menu icon matches the Session rows' pin icon. The order is automatic, so dragging a workspace is temporary. In the Workspace tree grouping a pinned workspace only leads its own siblings."
+  }
+}

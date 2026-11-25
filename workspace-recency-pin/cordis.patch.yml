@@ -1,0 +1,3 @@
+- insert:
+    - id: workspace-recency-pin
+      name: '@local/dsh-workspace-recency-pin'
