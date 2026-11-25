@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Removes the "在 DeepSeek Harness 中打开" Explorer context-menu entry.
 

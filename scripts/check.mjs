@@ -165,5 +165,21 @@ check(
   check(manifest.dsh?.client?.platform === 'web', 'manifest declares dsh.client.platform')
 }
 
+// 8. PowerShell assets keep a UTF-8 BOM
+//
+// Windows PowerShell 5.1 decodes a .ps1 without a BOM as the system code page,
+// which turns the Chinese menu labels into mojibake. The installer runs through
+// exactly that host, so the BOM is part of the contract, not a style choice.
+{
+  const windowsDir = join(packageRoot, 'assets', 'open-in-dsh', 'windows')
+  for (const name of ['install.ps1', 'uninstall.ps1']) {
+    const bytes = await readFile(join(windowsDir, name))
+    const hasBom = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf
+    check(hasBom, `${name} keeps its UTF-8 BOM`)
+  }
+  const installer = await readFile(join(windowsDir, 'install.ps1'), 'utf8')
+  check(installer.includes('在 DeepSeek Harness 中打开'), 'install.ps1 keeps the Chinese menu label')
+}
+
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
 process.exit(failures === 0 ? 0 : 1)

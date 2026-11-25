@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Adds a "在 DeepSeek Harness 中打开" entry to the Windows Explorer context menu.
 
