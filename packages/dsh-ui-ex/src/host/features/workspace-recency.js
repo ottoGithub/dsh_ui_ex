@@ -15,6 +15,14 @@
  * Reordering uses the public `workspaceRegistry.insertBefore`, so no shipped
  * Client slot is replaced.
  *
+ * The registry finishes its own asynchronous startup (session-header index plus
+ * the one-time history bootstrap) after this bundle has loaded, so a plain
+ * `ctx.get('workspaceRegistry')` at setup time reads `undefined` on a cold start
+ * and would disable the feature for the whole process. The RPC surface therefore
+ * exists immediately and the sorter itself is activated through
+ * `ctx.inject(['workspaceRegistry'], …)`, which runs as soon as the service is
+ * active: pins and recency that arrive earlier are buffered and replayed.
+ *
  * @module ui-ex/host/features/workspace-recency
  */
 
@@ -35,6 +43,12 @@ const RECENCY_LIMIT = 4000
 
 /** How many startup attempts may fail while the registry finishes its own start. */
 const BOOTSTRAP_ATTEMPTS = 20
+
+/** How long one RPC waits for the registry before reporting it as not started. */
+const READY_TIMEOUT_MS = 5000
+
+/** How long a registry that never appears stays silent before one warning. */
+const MISSING_SERVICE_WARN_MS = 30000
 
 /**
  * Parse one ISO timestamp defensively.
@@ -79,18 +93,13 @@ function parseStored(value) {
 }
 
 /**
- * Activate the feature.
- * @param ctx - Host context.
+ * Activate the sorter against a live registry.
+ * @param ctx - Host context that injects `workspaceRegistry`.
+ * @param registry - the durable workspace registry.
  * @param api - suite runtime api for this feature.
  * @returns the feature's RPC ops.
  */
-export function setup(ctx, api) {
-  const registry = ctx.get('workspaceRegistry')
-  if (registry === undefined) {
-    api.warn('workspaceRegistry is unavailable here, so the workspace order stays manual')
-    return {}
-  }
-
+function activate(ctx, registry, api) {
   const reconcileMs = Math.max(10, Number(api.options.reconcileSeconds) || 60) * 1000
   const stored = parseStored(api.state.read())
 
@@ -299,6 +308,99 @@ export function setup(ctx, api) {
         return snapshot()
       },
       toggle: payload => togglePin(String(payload?.workspaceId ?? '')),
+    },
+  }
+}
+
+/**
+ * Activate the feature: serve the pin/recency RPC immediately, and start the
+ * sorter as soon as `workspaceRegistry` is active.
+ * @param ctx - Host context.
+ * @param api - suite runtime api for this feature.
+ * @returns the feature's RPC ops.
+ */
+export function setup(ctx, api) {
+  /** The activated sorter; undefined while the registry finishes starting. */
+  let feature
+  /** Recency entries the browser sent before the sorter existed, replayed once. */
+  let bufferedSync
+  /** Callers parked in `whenReady`, each with its own deadline. */
+  const waiting = new Set()
+
+  /** Wake every parked caller once the sorter exists. */
+  const settle = () => {
+    for (const deliver of [...waiting]) deliver()
+    waiting.clear()
+  }
+
+  ctx.effect(() => {
+    // A profile without a workspace registry still degrades to a logged no-op,
+    // but only after the service had every chance to finish its startup.
+    const timer = setTimeout(() => {
+      if (feature === undefined) {
+        api.warn('workspaceRegistry never became available, so the workspace order stays manual')
+      }
+    }, MISSING_SERVICE_WARN_MS)
+    return () => clearTimeout(timer)
+  }, 'ui-ex/workspace-recency: missing registry warning')
+
+  // Runs now when the registry is already active, and later on a cold start.
+  ctx.inject(['workspaceRegistry'], (inner) => {
+    feature = activate(inner, inner.workspaceRegistry, api)
+    inner.effect(() => () => {
+      feature = undefined
+    }, 'ui-ex/workspace-recency: activation window')
+    if (bufferedSync !== undefined) {
+      try {
+        feature.rpc.sync({ entries: bufferedSync })
+      } catch {
+        // A replay that fails only loses recency the next push repeats.
+      }
+      bufferedSync = undefined
+    }
+    settle()
+  })
+
+  /**
+   * Resolve with the sorter, giving the registry a short grace period so a pin
+   * clicked during startup is not reported as broken.
+   * @returns the feature, or undefined when it did not activate in time.
+   */
+  const whenReady = () => new Promise((resolve) => {
+    if (feature !== undefined) {
+      resolve(feature)
+      return
+    }
+    const deliver = () => {
+      clearTimeout(timer)
+      resolve(feature)
+    }
+    const timer = setTimeout(() => {
+      waiting.delete(deliver)
+      resolve(feature)
+    }, READY_TIMEOUT_MS)
+    waiting.add(deliver)
+  })
+
+  return {
+    rpc: {
+      state: () => (feature === undefined ? { ready: false } : feature.rpc.state()),
+      sync: payload => {
+        if (feature === undefined) {
+          // Each push is a complete map, so the newest one supersedes older ones.
+          if (Array.isArray(payload?.entries)) bufferedSync = payload.entries
+          return { ready: false }
+        }
+        feature.rpc.sync(payload)
+        return feature.rpc.state()
+      },
+      toggle: async payload => {
+        const active = await whenReady()
+        if (active === undefined) {
+          throw new Error('workspaceRegistry has not finished starting, so the pin cannot be saved yet')
+        }
+        return active.rpc.toggle(payload)
+      },
     },
   }
 }

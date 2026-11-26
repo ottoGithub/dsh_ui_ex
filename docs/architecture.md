@@ -61,7 +61,9 @@ export function setup(ctx, api) {
 
 约定与陷阱：
 
-- 需要额外服务时用 `ctx.get('workspaceRegistry')` 之类的**软依赖**，缺失时 `api.warn` 并返回 `{}`，不要 throw —— 否则整个套件会因一个功能而停摆。
+- 需要额外服务时用 `ctx.get('workspaceRegistry')` 之类的**软依赖**，不要 throw —— 否则整个套件会因一个功能而停摆。
+- 但 `ctx.get(...)` **只在服务的 fiber 已经 active 时才返回实现**。dsh-base / dsh-web-app 里有异步启动的服务（典型：`workspaceRegistry` 要先索引会话头并完成一次性历史引导），插件行加载完时它们通常还没就绪，直接判空会把这个功能永久停用到下次重启。等待服务用 `ctx.inject(['workspaceRegistry'], (inner) => { … })`：服务激活时回调执行，回调里用 `inner.effect` / `inner.on` 注册的副作用随它一起卸载。RPC 外壳照常立即返回，先把浏览器发来的数据缓存、服务就绪后回放。
+- 只有服务确实永久缺席（例如无工作区能力的 profile）时才 `api.warn` 一条并保持空实现。
 - `setup` 抛错会被运行时捕获，该功能记为未启用，其他功能照常。
 - 状态的读写都走 `api.state`，不要自己算路径、不要自己写文件。
 
